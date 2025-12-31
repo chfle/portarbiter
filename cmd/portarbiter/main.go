@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-
+	"portarbiter/internal/resolve"
 	"portarbiter/internal/detect"
 )
 
@@ -26,6 +26,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Port %d is used by PIDs: %v\n", port, pids)
+	for _, pid := range pids {
+		owner, err := resolve.ResolveProcess(pid)
+		if err != nil {
+			fmt.Println("PID", pid, "error:", err)
+			continue
+		}
+		fmt.Println(owner.Describe())
+	}
+
 }
 
