@@ -1,0 +1,10 @@
+Package: portarbiter
+Version: __VERSION__
+Section: admin
+Priority: optional
+Architecture: amd64
+Maintainer: Christian Lehnert
+Description: Intelligent port ownership resolver and terminator
+ Determines which entity owns a TCP port (process, systemd, Docker,
+ docker-compose) and resolves it safely.
+
