@@ -3,7 +3,9 @@ package resolve
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -39,9 +41,8 @@ func (s *SystemdOwner) Kill(force bool) error {
 	)
 }
 
-// ResolveSystemd checks whether a PID belongs to a systemd service.
-// Returns (owner, true, nil) if yes
-// Returns (nil, false, nil) if not systemd-managed
+// ResolveSystemd determines whether a PID truly belongs to a systemd service.
+// IMPORTANT:
 func ResolveSystemd(pid int) (*SystemdOwner, bool, error) {
 	cmd := exec.Command(
 		"systemctl",
@@ -54,26 +55,42 @@ func ResolveSystemd(pid int) (*SystemdOwner, bool, error) {
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 
-	err := cmd.Run()
-	if err != nil {
-		// systemctl returns non-zero if PID is unknown
+	if err := cmd.Run(); err != nil {
 		return nil, false, nil
 	}
 
+	var service string
 	for _, line := range strings.Split(out.String(), "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "●") {
 			fields := strings.Fields(line)
 			if len(fields) >= 2 {
-				service := fields[1]
-				return &SystemdOwner{
-					Service: service,
-					PID:     pid,
-				}, true, nil
+				service = fields[1]
+				break
 			}
 		}
 	}
 
-	return nil, false, nil
+	if service == "" {
+		return nil, false, nil
+	}
+
+	// --- SSH SERVICE SPECIAL RULE ---
+	if service == "ssh.service" {
+		commPath := filepath.Join("/proc", strconv.Itoa(pid), "comm")
+		comm, err := os.ReadFile(commPath)
+		if err == nil {
+			procName := strings.TrimSpace(string(comm))
+			// Only sshd itself is service-owned
+			if procName != "sshd" {
+				return nil, false, nil
+			}
+		}
+	}
+
+	return &SystemdOwner{
+		Service: service,
+		PID:     pid,
+	}, true, nil
 }
 
