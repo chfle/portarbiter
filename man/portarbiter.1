@@ -1,0 +1,110 @@
+.TH PORTARBITER 1 "2025-01-01" "portarbiter 0.1.0" "System Administration"
+.SH NAME
+portarbiter \- determine and resolve TCP port ownership safely
+.SH SYNOPSIS
+.B portarbiter
+.RI [ options ] " <port>"
+.SH DESCRIPTION
+.B portarbiter
+analyzes which entity owns a TCP listening port on a Linux system and
+resolves it correctly.
+
+Ownership is determined hierarchically:
+
+.IP \[bu] 2
+Docker containers and docker-compose projects
+.IP \[bu]
+systemd-managed services (real daemons only)
+.IP \[bu]
+raw user or system processes
+
+By default,
+.B portarbiter
+runs in dry-run mode and performs no destructive actions.
+
+.SH OPTIONS
+.TP
+.BR --kill
+Terminate the owner holding the port.
+Without this flag, portarbiter only reports ownership.
+.TP
+.BR --force
+Force termination.
+For processes this sends SIGKILL.
+For Docker containers this uses
+.B docker kill
+instead of
+.B docker stop .
+.TP
+.BR --dry-run
+Show what would be done without performing any action.
+This is the default behavior.
+.TP
+.BR --yes ", " -y
+Automatically confirm dangerous actions such as
+bringing down a docker-compose project.
+Required for non-interactive or CI usage.
+.TP
+.BR --version
+Show version, git commit, and build date.
+.TP
+.BR --help
+Show usage information.
+
+.SH BEHAVIOR
+.B portarbiter
+never blindly kills supervisor services.
+
+Examples of protected behavior:
+.IP \[bu] 2
+SSH user sessions are treated as user processes, not as
+.B ssh.service
+.IP \[bu]
+Docker-published ports are resolved to the owning container or compose project,
+not to
+.B docker.service
+
+Docker compose projects require explicit confirmation before being brought down.
+
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+Invalid usage or missing arguments.
+.TP
+.B 2
+Invalid port.
+.TP
+.B 3
+Failed to detect port ownership.
+.TP
+.B 10
+Termination failed.
+.TP
+.B 20
+Action aborted by user.
+
+.SH EXAMPLES
+.TP
+Inspect port 5432:
+.B
+portarbiter 5432
+.TP
+Terminate the owning container:
+.B
+portarbiter --kill 5432
+.TP
+Force termination without confirmation:
+.B
+portarbiter --kill --force --yes 5432
+
+.SH SEE ALSO
+.BR ss (8),
+.BR systemctl (1),
+.BR docker (1)
+
+.SH AUTHOR
+Written by the portarbiter project contributors.
+
