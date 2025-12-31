@@ -14,15 +14,18 @@ func main() {
 		doKill bool
 		force  bool
 		dryRun bool
+		yes    bool
 	)
 
 	flag.BoolVar(&doKill, "kill", false, "terminate the owner holding the port")
 	flag.BoolVar(&force, "force", false, "force termination")
 	flag.BoolVar(&dryRun, "dry-run", false, "show what would be done")
+	flag.BoolVar(&yes, "yes", false, "auto-confirm dangerous actions")
+	flag.BoolVar(&yes, "y", false, "auto-confirm dangerous actions (shorthand)")
 	flag.Parse()
 
 	if flag.NArg() < 1 {
-		fmt.Println("Usage: portarbiter [--dry-run] [--kill] [--force] <port>")
+		fmt.Println("Usage: portarbiter [--dry-run] [--kill] [--force] [--yes] <port>")
 		os.Exit(1)
 	}
 
@@ -41,6 +44,7 @@ func main() {
 		DryRun: dryRun,
 		Kill:   doKill,
 		Force:  force,
+		Yes:    yes,
 	})
 
 	os.Exit(exitCode)
