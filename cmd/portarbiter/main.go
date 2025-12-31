@@ -7,14 +7,16 @@ import (
 	"strconv"
 
 	"portarbiter/internal/app"
+	"portarbiter/internal/version"
 )
 
 func main() {
 	var (
-		doKill bool
-		force  bool
-		dryRun bool
-		yes    bool
+		doKill   bool
+		force    bool
+		dryRun   bool
+		yes      bool
+		showVer  bool
 	)
 
 	flag.BoolVar(&doKill, "kill", false, "terminate the owner holding the port")
@@ -22,7 +24,13 @@ func main() {
 	flag.BoolVar(&dryRun, "dry-run", false, "show what would be done")
 	flag.BoolVar(&yes, "yes", false, "auto-confirm dangerous actions")
 	flag.BoolVar(&yes, "y", false, "auto-confirm dangerous actions (shorthand)")
+	flag.BoolVar(&showVer, "version", false, "show version information")
 	flag.Parse()
+
+	if showVer {
+		fmt.Println(version.String())
+		os.Exit(0)
+	}
 
 	if flag.NArg() < 1 {
 		fmt.Println("Usage: portarbiter [--dry-run] [--kill] [--force] [--yes] <port>")
