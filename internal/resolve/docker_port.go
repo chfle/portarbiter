@@ -9,51 +9,42 @@ import (
 
 // ResolveDockerByPort tries to find a container that publishes the given host port
 func ResolveDockerByPort(port int) (*DockerOwner, bool, error) {
-	cmd := exec.Command(
-		"docker", "ps",
-		"--format", "{{.ID}}",
-	)
-
+	cmd := exec.Command("docker", "ps", "--format", "{{.ID}}")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 
 	if err := cmd.Run(); err != nil {
+		// docker not available or not running => not resolvable here
 		return nil, false, nil
 	}
+
+	needle := fmt.Sprintf(`"HostPort": "%d"`, port)
 
 	for _, id := range strings.Split(strings.TrimSpace(out.String()), "\n") {
 		if id == "" {
 			continue
 		}
 
-		inspect := exec.Command("docker", "inspect", id)
-		var data bytes.Buffer
-		inspect.Stdout = &data
-		inspect.Stderr = &data
-
-		if err := inspect.Run(); err != nil {
+		txt, err := dockerInspect(id)
+		if err != nil {
 			continue
 		}
 
-		txt := data.String()
-
-		needle := fmt.Sprintf(`"HostPort": "%d"`, port)
 		if !strings.Contains(txt, needle) {
 			continue
 		}
 
 		name := extractJSONField(txt, `"Name":`)
 		image := extractJSONField(txt, `"Image":`)
-
 		composeProj := extractJSONLabel(txt, "com.docker.compose.project")
 		composeSvc := extractJSONLabel(txt, "com.docker.compose.service")
 
 		return &DockerOwner{
-			ContainerID:   id[:12],
+			ContainerID:   id, // FULL
 			ContainerName: strings.TrimPrefix(name, "/"),
 			Image:         image,
-			PID:           0,
+			PID:           0, // host-side proxy/dockerd, not container PID
 			ComposeProj:   composeProj,
 			ComposeSvc:    composeSvc,
 		}, true, nil

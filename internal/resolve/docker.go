@@ -31,31 +31,56 @@ func (d *DockerOwner) ID() string {
 	return d.ContainerID
 }
 
+func (d *DockerOwner) shortID() string {
+	if len(d.ContainerID) >= 12 {
+		return d.ContainerID[:12]
+	}
+	return d.ContainerID
+}
+
 func (d *DockerOwner) Describe() string {
 	if d.ComposeProj != "" {
 		return fmt.Sprintf(
-			"docker-compose project=%s service=%s container=%s pid=%d image=%s",
-			d.ComposeProj, d.ComposeSvc, d.ContainerName, d.PID, d.Image,
+			"docker-compose project=%s service=%s container=%s id=%s pid=%d image=%s",
+			d.ComposeProj, d.ComposeSvc, d.ContainerName, d.shortID(), d.PID, d.Image,
 		)
 	}
 
 	return fmt.Sprintf(
-		"docker container=%s pid=%d image=%s",
-		d.ContainerName, d.PID, d.Image,
+		"docker container=%s id=%s pid=%d image=%s",
+		d.ContainerName, d.shortID(), d.PID, d.Image,
 	)
 }
 
 func (d *DockerOwner) Kill(force bool) error {
+	// Compose project: stop the project, not a single container
 	if d.ComposeProj != "" {
-		return fmt.Errorf(
-			"container is part of docker-compose project %s (use: docker compose down)",
-			d.ComposeProj,
-		)
+		// Use docker compose with project name so we don't need the compose directory.
+		// This will target the project by name.
+		args := []string{"compose", "-p", d.ComposeProj, "down"}
+		if force {
+			// "down" doesn't have a true "force" semantic; we speed up termination.
+			args = append(args, "--timeout", "1")
+		}
+
+		if err := runDocker(args...); err != nil {
+			return fmt.Errorf("failed to bring down compose project %s: %w", d.ComposeProj, err)
+		}
+		return nil
 	}
-	return fmt.Errorf(
-		"docker-managed container %s (use: docker stop %s)",
-		d.ContainerName,
-	)
+
+	// Single container
+	if force {
+		if err := runDocker("kill", d.ContainerID); err != nil {
+			return fmt.Errorf("docker kill %s failed: %w", d.shortID(), err)
+		}
+		return nil
+	}
+
+	if err := runDocker("stop", d.ContainerID); err != nil {
+		return fmt.Errorf("docker stop %s failed: %w", d.shortID(), err)
+	}
+	return nil
 }
 
 // ResolveDocker checks if PID belongs to a Docker container via cgroups
@@ -83,32 +108,46 @@ func ResolveDocker(pid int) (*DockerOwner, bool, error) {
 		return nil, false, nil
 	}
 
-	// docker inspect
-	cmd := exec.Command("docker", "inspect", containerID)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &out
-
-	if err := cmd.Run(); err != nil {
-		return nil, false, fmt.Errorf("docker inspect failed: %w", err)
+	txt, err := dockerInspect(containerID)
+	if err != nil {
+		return nil, false, err
 	}
 
-	output := out.String()
-
-	name := extractJSONField(output, `"Name":`)
-	image := extractJSONField(output, `"Image":`)
-
-	composeProj := extractJSONLabel(output, "com.docker.compose.project")
-	composeSvc := extractJSONLabel(output, "com.docker.compose.service")
+	name := extractJSONField(txt, `"Name":`)
+	image := extractJSONField(txt, `"Image":`)
+	composeProj := extractJSONLabel(txt, "com.docker.compose.project")
+	composeSvc := extractJSONLabel(txt, "com.docker.compose.service")
 
 	return &DockerOwner{
-		ContainerID:   containerID[:12],
+		ContainerID:   containerID,
 		ContainerName: strings.TrimPrefix(name, "/"),
 		Image:         image,
 		PID:           pid,
 		ComposeProj:   composeProj,
 		ComposeSvc:    composeSvc,
 	}, true, nil
+}
+
+func dockerInspect(containerID string) (string, error) {
+	cmd := exec.Command("docker", "inspect", containerID)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("docker inspect failed: %w (%s)", err, out.String())
+	}
+	return out.String(), nil
+}
+
+func runDocker(args ...string) error {
+	cmd := exec.Command("docker", args...)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%w (%s)", err, out.String())
+	}
+	return nil
 }
 
 // minimal JSON scraping (we avoid full JSON parsing intentionally)
