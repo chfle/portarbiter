@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
+
+	"portarbiter/internal/detect"
 )
 
 func main() {
@@ -11,7 +14,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	port := os.Args[1]
-	fmt.Printf("portarbiter: inspecting port %s\n", port)
+	port, err := strconv.Atoi(os.Args[1])
+	if err != nil {
+		fmt.Println("Invalid port")
+		os.Exit(1)
+	}
+
+	pids, err := detect.FindPIDsByPort(port)
+	if err != nil {
+		fmt.Println("Error:", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Port %d is used by PIDs: %v\n", port, pids)
 }
 
