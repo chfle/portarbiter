@@ -70,21 +70,23 @@ Docker compose projects require explicit confirmation before being brought down.
 .TP
 .B 0
 Success.
-.TP
-.B 1
-Invalid usage or missing arguments.
-.TP
-.B 2
-Invalid port.
-.TP
-.B 3
-Failed to detect port ownership.
+The port was inspected successfully or the operation was a dry-run.
 .TP
 .B 10
-Termination failed.
+Action failed.
+The owning entity was identified, but termination failed.
 .TP
 .B 20
-Action aborted by user.
+Action denied or confirmation required.
+The owning entity is protected by policy or requires explicit confirmation
+without the
+.B --yes
+flag.
+.TP
+.B 30
+Detection failed.
+The port could not be resolved to a process or owning entity.
+
 
 .SH EXAMPLES
 .TP
