@@ -1,0 +1,26 @@
+#compdef portarbiter
+
+_arguments \
+  '--kill[terminate the owner holding the port]' \
+  '--force[force termination]' \
+  '--dry-run[show what would be done]' \
+  '--yes[auto-confirm dangerous actions]' \
+  '-y[auto-confirm dangerous actions]' \
+  '--version[show version information]' \
+  '--help[show help]' \
+  '1:port number:_ports'
+
+_ports() {
+  local ports
+  ports=(
+    22
+    80
+    443
+    5432
+    6379
+    8080
+    9200
+  )
+  _describe 'ports' ports
+}
+
