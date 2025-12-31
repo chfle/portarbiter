@@ -9,6 +9,11 @@ const (
 	OwnerCompose OwnerType = "docker-compose"
 )
 
+// String implements fmt.Stringer
+func (o OwnerType) String() string {
+	return string(o)
+}
+
 type Owner interface {
 	Type() OwnerType
 	ID() string
