@@ -16,6 +16,13 @@ type Options struct {
 }
 
 func Run(opts Options) int {
+	if dock, ok, err := resolve.ResolveDockerByPort(opts.Port); err == nil && ok {
+		fmt.Printf("Port %d is used by:\n", opts.Port)
+		exitCode := 0
+		handleOwner(dock, opts, &exitCode)
+		return exitCode
+	}
+
 	pids, err := detect.FindPIDsByPort(opts.Port)
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -29,7 +36,6 @@ func Run(opts Options) int {
 
 	for _, pid := range pids {
 
-		// 1) Docker / Compose
 		if dock, ok, err := resolve.ResolveDocker(pid); err == nil && ok {
 			key := dock.Type().String() + ":" + dock.ID()
 			if seen[key] {
@@ -40,7 +46,6 @@ func Run(opts Options) int {
 			continue
 		}
 
-		// 2) systemd
 		if sys, ok, err := resolve.ResolveSystemd(pid); err == nil && ok {
 			key := sys.Type().String() + ":" + sys.ID()
 			if seen[key] {
@@ -51,7 +56,6 @@ func Run(opts Options) int {
 			continue
 		}
 
-		// 3) raw process
 		proc, err := resolve.ResolveProcess(pid)
 		if err != nil {
 			fmt.Printf("  pid=%d error=%v\n", pid, err)
