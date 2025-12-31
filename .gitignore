@@ -1,0 +1,38 @@
+# ---- Go build artifacts ----
+/portarbiter
+/*.exe
+/*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# ---- Go workspace ----
+/vendor/
+
+# ---- Coverage & profiling ----
+*.coverprofile
+*.pprof
+
+# ---- Editor & OS noise ----
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.tmp
+
+# ---- Logs ----
+*.log
+
+# ---- Packaging artifacts ----
+/dist/
+/build/
+/*.deb
+
+# ---- Environment ----
+.env
+.env.*
+
