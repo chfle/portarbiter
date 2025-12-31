@@ -3,9 +3,9 @@ package resolve
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"portarbiter/pkg/model"
 )
@@ -34,31 +34,38 @@ func (p *ProcessOwner) Describe() string {
 }
 
 func (p *ProcessOwner) Kill(force bool) error {
-	sig := "TERM"
-	if force {
-		sig = "KILL"
+	proc, err := os.FindProcess(p.PID)
+	if err != nil {
+		return fmt.Errorf("cannot find process %d: %w", p.PID, err)
 	}
-	return fmt.Errorf("kill not implemented yet (would send SIG%s to pid %d)", sig, p.PID)
+
+	sig := syscall.SIGTERM
+	if force {
+		sig = syscall.SIGKILL
+	}
+
+	if err := proc.Signal(sig); err != nil {
+		return fmt.Errorf("failed to send %s to pid %d: %w", sig.String(), p.PID, err)
+	}
+
+	return nil
 }
 
 // ResolveProcess creates a ProcessOwner from a PID using /proc
 func ResolveProcess(pid int) (*ProcessOwner, error) {
-	proc := fmt.Sprintf("/proc/%d", pid)
+	procPath := fmt.Sprintf("/proc/%d", pid)
 
-	// --- Name ---
-	comm, err := os.ReadFile(filepath.Join(proc, "comm"))
+	comm, err := os.ReadFile(procPath + "/comm")
 	if err != nil {
 		return nil, err
 	}
 	name := strings.TrimSpace(string(comm))
 
-	// --- Cmdline ---
-	cmdBytes, _ := os.ReadFile(filepath.Join(proc, "cmdline"))
+	cmdBytes, _ := os.ReadFile(procPath + "/cmdline")
 	cmdline := strings.ReplaceAll(string(cmdBytes), "\x00", " ")
 	cmdline = strings.TrimSpace(cmdline)
 
-	// --- Status (UID, PPID) ---
-	status, err := os.ReadFile(filepath.Join(proc, "status"))
+	status, err := os.ReadFile(procPath + "/status")
 	if err != nil {
 		return nil, err
 	}
