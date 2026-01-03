@@ -10,5 +10,6 @@ type Options struct {
 	Yes    bool
 
 	Trace *trace.Trace
+	ReasonOnly bool
 }
 
