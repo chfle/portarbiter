@@ -55,6 +55,13 @@ func Run(opts Options) int {
 func handleOwner(opts Options, owner model.Owner) int {
 	decision := policy.Evaluate(owner.Type(), owner.Describe())
 
+	if opts.CheckOnly {
+		if decision.Level == policy.Allowed {
+			return 0
+		}
+		return 20
+	}
+
 	if opts.ReasonOnly {
 		fmt.Printf("%s: %s\n", decision.Level.String(), decision.Reason)
 

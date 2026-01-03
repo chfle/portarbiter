@@ -11,5 +11,6 @@ type Options struct {
 
 	Trace *trace.Trace
 	ReasonOnly bool
+	CheckOnly  bool
 }
 
