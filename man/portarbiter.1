@@ -50,6 +50,12 @@ Show version, git commit, and build date.
 .TP
 .BR --help
 Show usage information.
+.TP
+.BR --check
+Check mode.
+Performs a policy evaluation only and exits with a status code.
+No output is produced and no action is performed.
+This mode is intended for scripting and automation.
 
 .SH BEHAVIOR
 .B portarbiter
@@ -70,7 +76,7 @@ Docker compose projects require explicit confirmation before being brought down.
 .TP
 .B 0
 Success.
-The port was inspected successfully or the operation was a dry-run.
+The operation would be allowed according to policy.
 .TP
 .B 10
 Action failed.
@@ -78,14 +84,11 @@ The owning entity was identified, but termination failed.
 .TP
 .B 20
 Action denied or confirmation required.
-The owning entity is protected by policy or requires explicit confirmation
-without the
-.B --yes
-flag.
+The owning entity is protected by policy or requires explicit confirmation.
 .TP
 .B 30
 Detection failed.
-The port could not be resolved to a process or owning entity.
+The port could not be resolved to an owning entity.
 
 
 .SH EXAMPLES
